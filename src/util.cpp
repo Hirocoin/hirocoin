@@ -1148,6 +1148,12 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
                    fprintf(ConfFile, "addnode=46.101.19.150:9348\n");
                    fprintf(ConfFile, "addnode=159.203.3.25:9348\n");
                    fprintf(ConfFile, "addnode=159.203.14.27:9348\n");
+                    // Paid for Nodes
+                   fprintf(ConfFile, "addnode=188.213.175.51:9348\n");
+                   fprintf(ConfFile, "addnode=81.2.243.45:9348\n");
+                   fprintf(ConfFile, "addnode=89.36.215.7:9348\n");
+                   fprintf(ConfFile, "addnode=89.40.117.223:9348\n");
+                   fprintf(ConfFile, "addnode=89.38.146.59:9348\n");
 
                    fclose(ConfFile);
                    // Returns our config path, created config file is NOT loaded first time...

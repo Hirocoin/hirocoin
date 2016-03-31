@@ -175,6 +175,29 @@ bool AppInit(int argc, char* argv[])
             Shutdown();
         }
         ReadConfigFile(mapArgs, mapMultiArgs);
+        // Add static ip of our clients.
+        mapMultiArgs["-addnode"].push_back("178.62.105.132:9348");
+        mapMultiArgs["-addnode"].push_back("46.101.19.150:9348");
+        mapMultiArgs["-addnode"].push_back("178.62.130.89:9348");
+        mapMultiArgs["-addnode"].push_back("128.199.82.183:9348");
+        mapMultiArgs["-addnode"].push_back("46.101.224.176:9348");
+        mapMultiArgs["-addnode"].push_back("104.131.121.211:9348");
+        mapMultiArgs["-addnode"].push_back("162.243.147.101:9348");
+        mapMultiArgs["-addnode"].push_back("188.166.60.96:9348");
+        mapMultiArgs["-addnode"].push_back("198.199.80.145:9348");
+        mapMultiArgs["-addnode"].push_back("192.241.235.239:9348");
+        mapMultiArgs["-addnode"].push_back("46.101.63.107:9348");
+        mapMultiArgs["-addnode"].push_back("173.20.221.70:9348");
+        mapMultiArgs["-addnode"].push_back("159.203.3.25:9348");
+        mapMultiArgs["-addnode"].push_back("259.203.14.27:9348");
+        mapMultiArgs["-addnode"].push_back("159.203.12.73:9348");
+        mapMultiArgs["-addnode"].push_back("107.170.249.124:9348");
+        // Paid for Nodes
+        mapMultiArgs["-addnode"].push_back("188.213.175.51:9348");
+        mapMultiArgs["-addnode"].push_back("81.2.243.45:9348");
+        mapMultiArgs["-addnode"].push_back("89.36.215.7:9348");
+        mapMultiArgs["-addnode"].push_back("89.40.117.223:9348");
+        mapMultiArgs["-addnode"].push_back("89.38.146.59:9348");
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {

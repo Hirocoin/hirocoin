@@ -26,9 +26,9 @@ class CNode;
 struct CBlockIndexWorkComparator;
 
 /** The maximum allowed size for a serialized block, in bytes (network rule) */
-static const unsigned int MAX_BLOCK_SIZE = 1000000;                      // 1000KB block hard limit
+static const unsigned int MAX_BLOCK_SIZE = 1000000; // 1000KB block hard limit
 /** Obsolete: maximum size for mined blocks */
-static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/4;         // 250KB  block soft limit
+static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/4; // 250KB  block soft limit
 /** Default for -blockmaxsize, maximum size for mined blocks **/
 static const unsigned int DEFAULT_BLOCK_MAX_SIZE = 250000;
 /** Default for -blockprioritysize, maximum space for zero/low-fee transactions **/
@@ -49,12 +49,39 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Fake height value used in CCoins to signify they are only in the memory pool (since 0.8) */
 static const unsigned int MEMPOOL_HEIGHT = 0x7FFFFFFF;
+/** Nate's (Kimoto) Gravity Well Fork */
+static const int nHardForkOne = 55959;
+/** Chain fork to Volatile Subsidy to Miners */
+static const int nVolatileSubsidyFork = 290000;
 /** Dust Soft Limit, allowed with additional fee per output */
 static const int64 DUST_SOFT_LIMIT = 100000; // 0.001 HIRO
 /** Dust Hard Limit, ignored as wallet inputs (mininput default) */
 static const int64 DUST_HARD_LIMIT = 1000;   // 0.00001 HIRO mininput
-/** No amount larger than this (in satoshi) is valid */
-static const int64 MAX_MONEY = 672000000 * COIN;
+/** Genesis Start Time */
+static const unsigned int timeGenesisBlock = 1394723131;
+/** Genesis TestNet Start Time */
+static const unsigned int timeTestNetGenesisBlock = 1394723194;
+/** No amount larger than this (in HIRO) is valid */
+static const int64 MAX_MONEY = 672000000 * COIN; // 672M Total
+/** Genesis block subsidy */
+static const int64 nGenesisBlockSubsidy = 400 * COIN;
+/** Mineout/HardCap block subsidy [HardCap v1.5] */
+static const int64 nMineoutBlockSubsidy = 0.002 * COIN; // ~1,051.2 yearly newly minted (Annual Interest paid to miners as a reward)
+/** Invalid block subsidy */
+static const int64 nBlockRewardInvalid = 0.0001 * COIN;
+/** Halving block interval */                                                     
+static const int64 nHalvingBlock = 840000; // Subsidy halved every 840000 blocks, approximately ~1.6 years [ENDS AT BLOCK 1,680,000] - June 30, 2017
+/** Halving End */                                                     
+static const int64 nHalvingEnd = 1680000;
+/** Mineout/HardCap block Height [HardCap v1.5] Interest paid to miners, starting at block 2,978,250 reward = 0.002 perBlock (starts @ ~672-Million Hiro generated) */
+static const int64 nMineoutBlock = 2978250; // MINEOUT DATE: December 18, 2019 
+/** Difficulty Retarget Timespan */  
+static const int64 nTargetTimespan = 24 * 60 * 60; // Hirocoin: 1 day
+/** Difficulty Retarget Spacing */
+static const int64 nTargetSpacing = 60; // Hirocoin: 1 minute
+/** Difficulty Block Interval */
+static const int64 nInterval = nTargetTimespan / nTargetSpacing;
+/** Money Range Params */
 inline bool MoneyRange(int64 nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
 static const int COINBASE_MATURITY = 100;
@@ -62,6 +89,10 @@ static const int COINBASE_MATURITY = 100;
 static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
 /** Maximum number of script-checking threads allowed */
 static const int MAX_SCRIPTCHECK_THREADS = 16;
+/** Genesis Param Inputs */
+static const uint256 hashGenesisBlock("0x000002ba782d377ee807487d2171c47348821e89ba0a59ade6776e02f53054f1");
+static const uint256 hashTestNetGenesisBlock("0x000008da0e16960d6c2548da4831323b956d61370e2a3fdc5150188c5c478c49");
+static const uint256 nGenesisMerkle("0xb0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a");
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;
 #else
@@ -79,7 +110,7 @@ extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern std::map<uint256, CBlockIndex*> mapBlockIndex;
 extern std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexValid;
-extern uint256 hashGenesisBlock;
+//extern uint256 hashGenesisBlock;
 extern CBlockIndex* pindexGenesisBlock;
 extern int nBestHeight;
 extern uint256 nBestChainWork;

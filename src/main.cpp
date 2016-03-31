@@ -33,7 +33,6 @@ CTxMemPool mempool;
 unsigned int nTransactionsUpdated = 0;
 
 map<uint256, CBlockIndex*> mapBlockIndex;
-uint256 hashGenesisBlock("0x000002ba782d377ee807487d2171c47348821e89ba0a59ade6776e02f53054f1");
 static CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // Hirocoin: starting difficulty is 1 / 2^12
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
@@ -49,13 +48,10 @@ bool fReindex = false;
 bool fBenchmark = false;
 bool fTxIndex = false;
 unsigned int nCoinCacheSize = 5000;
-static const int nHardForkOne = 55959;
-
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
 int64 CTransaction::nMinTxFee = 100000;
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying) */
 int64 CTransaction::nMinRelayTxFee = 100000;
-
 CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
 
 map<uint256, CBlock*> mapOrphanBlocks;
@@ -1062,21 +1058,18 @@ uint256 static GetOrphanRoot(const CBlockHeader* pblock)
     while (mapOrphanBlocks.count(pblock->hashPrevBlock))
         pblock = mapOrphanBlocks[pblock->hashPrevBlock];
     return pblock->GetHash();
-}
+}                                                         
 
-static const int64 nBlockRewardMineoutCoin = 0.002 * COIN; // ~1,051.2 yearly newly minted
-                                                           //(Annual Interest paid to miners as a reward)
-
-
+// PoW Miner Subsidy Function
 int64 static GetBlockValue(const CBlockIndex* pindexLast, int64 nFees, bool addOne)
 {
     int nHeight = pindexLast->nHeight;
-    if (addOne) {nHeight += 1;}
     int mockSubsidy = 400;
-    if (nHeight > 290000) {
+    if (addOne) {nHeight += 1;}
+    if (nHeight > nVolatileSubsidyFork) {
         if (!addOne) pindexLast = pindexLast->pprev;
         const CBlockIndex* pindexFirst = pindexLast;
-        mockSubsidy = 200; // Average reward
+        mockSubsidy = 200;
         double diffTotal = 0;
         double lastDiff = GetDifficulty(pindexLast);
         for (int i = 0; pindexFirst && i < 100; i++) {
@@ -1088,37 +1081,23 @@ int64 static GetBlockValue(const CBlockIndex* pindexLast, int64 nFees, bool addO
         if (weight < 0.2) weight = 0.2; // Min 40 reward
         mockSubsidy *= weight;
     }
-    int64 nSubsidy = mockSubsidy * COIN;
-
     // Mining Phase Subsidy
-    // Subsidy is cut in half every 840000 blocks, which will occur approximately every ~1.6 years
-    // [HALVING ENDS AT BLOCK 1,680,000 OR ON - June 30, 2017
-    // THE PAYOUT WILL REMAIN ~140 per block until mineout
-    // This was done in an effort to prevent the coin from never attaining cap
-    // as well as to keep the coin from eventually breaking (as once halved too-
-    // many times the coin cannot calculate correctly)
-    if (nHeight < 1680000)
+    int64 nSubsidy = mockSubsidy * COIN;
+    // Mining Halving Phase
+    if (nHeight < nHalvingEnd)
     {
-        nSubsidy >>= (nHeight / 840000);
+        nSubsidy >>= (nHeight / nHalvingBlock);
     }
-
     // Mineout Phase Subsidy
-    // Interest paid to miners
-    // by small payouts geared at
-    // maintaining the blockchain
-    // Mineout Reward, starting at block 2,978,250 reward = 0.002 perBlock (starts @ ~672-Million Hiro generated)
-    // MINEOUT DATE: December 18, 2019
-    else if (nHeight >= 2978250)
+    else if (nHeight >= nMineoutBlock)
     {
-    nSubsidy = nBlockRewardMineoutCoin;
+    nSubsidy = nMineoutBlockSubsidy;
     }
+    // Invalid Protection
+    else nSubsidy = nBlockRewardInvalid;
 
     return nSubsidy + nFees;
 }
-
-static const int64 nTargetTimespan = 24 * 60 * 60; // Hirocoin: 1 day
-static const int64 nTargetSpacing = 60; // Hirocoin: 1 minute
-static const int64 nInterval = nTargetTimespan / nTargetSpacing;
 
 //
 // minimum amount of work that could possibly be required nTime after
@@ -2869,13 +2848,7 @@ bool LoadBlockIndex()
         pchMessageStart[1] = 0xc4;
         pchMessageStart[2] = 0xba;
         pchMessageStart[3] = 0xde;
-		// Testnet Genesis block:
-        // CBlock(hash=000008da0e16960d6c2548da4831323b956d61370e2a3fdc5150188c5c478c49, input=0100000000000000000000000000000000000000000000000000000000000000000000002a5d09737c826a5f8c12307a9c71774cd2e752e2910c9618744f05bc929d01b07ac92153f0ff0f1eb86e964c, PoW=000008da0e16960d6c2548da4831323b956d61370e2a3fdc5150188c5c478c49, ver=1, hashPrevBlock=0000000000000000000000000000000000000000000000000000000000000000, hashMerkleRoot=b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a, nTime=1394723194, nBits=1e0ffff0, nNonce=1284927160, vtx=1)
-        // CTransaction(hash=b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a, ver=1, vin.size=1, vout.size=1, nLockTime=0)
-        // CTxIn(COutPoint(0000000000000000000000000000000000000000000000000000000000000000, 4294967295), coinbase 04ffff001d0104474a6170616e546f6461792031332f4d61722f323031342057617973206579656420746f206d616b6520706c616e65732065617369657220746f2066696e6420696e206f6365616e)
-        // CTxOut(nValue=400.00000000, scriptPubKey=040184710fa689ad5023690c80f3a4)
-        // vMerkleTree: b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a 
-        hashGenesisBlock = uint256("0x000008da0e16960d6c2548da4831323b956d61370e2a3fdc5150188c5c478c49");
+        hashTestNetGenesisBlock;
     }
 
     //
@@ -2900,32 +2873,38 @@ bool InitBlockIndex() {
 
     // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)
     if (!fReindex) {
-	// Mainnet Genesis block:
+	   // Mainnet Genesis block:
     // CBlock(hash=1267d7cab30e6d3f8638fa5ecd44a303ada9483e94c8c530ee60ded5bb068014, input=0100000000000000000000000000000000000000000000000000000000000000000000002a5d09737c826a5f8c12307a9c71774cd2e752e2910c9618744f05bc929d01b03bc92153f0ff0f1e8ae0914c, PoW=1267d7cab30e6d3f8638fa5ecd44a303ada9483e94c8c530ee60ded5bb068014, ver=1, hashPrevBlock=0000000000000000000000000000000000000000000000000000000000000000, hashMerkleRoot=b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a, nTime=1394723131, nBits=1e0ffff0, nNonce=1284628618, vtx=1)
     // CTransaction(hash=b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a, ver=1, vin.size=1, vout.size=1, nLockTime=0)
     // CTxIn(COutPoint(0000000000000000000000000000000000000000000000000000000000000000, 4294967295), coinbase 04ffff001d0104474a6170616e546f6461792031332f4d61722f323031342057617973206579656420746f206d616b6520706c616e65732065617369657220746f2066696e6420696e206f6365616e)
     // CTxOut(nValue=400.00000000, scriptPubKey=040184710fa689ad5023690c80f3a4)
     // vMerkleTree: b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a 
-	
+	   // Testnet Genesis block:
+    // CBlock(hash=000008da0e16960d6c2548da4831323b956d61370e2a3fdc5150188c5c478c49, input=0100000000000000000000000000000000000000000000000000000000000000000000002a5d09737c826a5f8c12307a9c71774cd2e752e2910c9618744f05bc929d01b07ac92153f0ff0f1eb86e964c, PoW=000008da0e16960d6c2548da4831323b956d61370e2a3fdc5150188c5c478c49, ver=1, hashPrevBlock=0000000000000000000000000000000000000000000000000000000000000000, hashMerkleRoot=b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a, nTime=1394723194, nBits=1e0ffff0, nNonce=1284927160, vtx=1)
+    // CTransaction(hash=b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a, ver=1, vin.size=1, vout.size=1, nLockTime=0)
+    // CTxIn(COutPoint(0000000000000000000000000000000000000000000000000000000000000000, 4294967295), coinbase 04ffff001d0104474a6170616e546f6461792031332f4d61722f323031342057617973206579656420746f206d616b6520706c616e65732065617369657220746f2066696e6420696e206f6365616e)
+    // CTxOut(nValue=400.00000000, scriptPubKey=040184710fa689ad5023690c80f3a4)
+    // vMerkleTree: b0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a 
+        
 		const char* pszTimestamp = "JapanToday 13/Mar/2014 Ways eyed to make planes easier to find in ocean";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 486604799 << CBigNum(4) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-        txNew.vout[0].nValue = 400 * COIN;
+        txNew.vout[0].nValue = nGenesisBlockSubsidy;
         txNew.vout[0].scriptPubKey = CScript() << ParseHex("040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9") << OP_CHECKSIG;
         CBlock block;
         block.vtx.push_back(txNew);
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1394723131;
+        block.nTime    = timeGenesisBlock;
         block.nBits    = 0x1e0ffff0;
         block.nNonce   = 1234746574;
 
         if (fTestNet)
         {
-            block.nTime    = 1394723194;
+            block.nTime    = timeTestNetGenesisBlock;
             block.nNonce   = 1284927160;
         }
 		
@@ -2934,7 +2913,7 @@ bool InitBlockIndex() {
         printf("%s\n", hash.ToString().c_str());
         printf("%s\n", hashGenesisBlock.ToString().c_str());
         printf("%s\n", block.hashMerkleRoot.ToString().c_str());
-        assert(block.hashMerkleRoot == uint256("0xb0019d92bc054f7418960c91e252e7d24c77719c7a30128c5f6a827c73095d2a"));
+        assert(block.hashMerkleRoot == nGenesisMerkle);
 
         block.print();
         assert(hash == hashGenesisBlock);
